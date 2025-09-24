@@ -1,0 +1,73 @@
+-- SQL DATA CLEAN UP
+
+-- Remove duplicates by keeping the latest record
+DELETE s1 FROM Shipments s1
+JOIN Shipments s2 
+ON s1.ShipmentID = s2.ShipmentID AND s1.rowid > s2.rowid;
+
+-- Replace NULLs with defaults
+UPDATE Shipments
+SET SPID = COALESCE(SPID, 'Unknown'),
+    PID = COALESCE(PID, 'Unknown'),
+    GID = COALESCE(GID, 'Unknown'),
+    Order_Status = COALESCE(Order_Status, 'Pending');
+
+-- Remove future dates
+DELETE FROM Shipments WHERE Shipdate > CURDATE();
+
+-- Remove negative Amounts
+UPDATE Shipments SET Amount = 0 WHERE Amount IS NULL OR Amount < 0;
+
+-- Cap Boxes > 1000
+UPDATE Shipments SET Boxes = 1000 WHERE Boxes > 1000;
+
+
+
+-- Remove duplicates
+DELETE p1 FROM Products p1
+JOIN Products p2 
+ON p1.PID = p2.PID AND p1.rowid > p2.rowid;
+
+-- Standardize category capitalization
+UPDATE Products SET Category = INITCAP(Category);
+
+-- Replace invalid costs
+UPDATE Products
+SET Cost_per_box = (SELECT AVG(Cost_per_box) FROM Products)
+WHERE Cost_per_box IS NULL OR Cost_per_box < 0;
+
+
+-- Remove duplicates
+DELETE g1 FROM Geography g1
+JOIN Geography g2 
+ON g1.GID = g2.GID AND g1.rowid > g2.rowid;
+
+-- Standardize text
+UPDATE Geography SET Geo = INITCAP(Geo), Region = UPPER(Region);
+
+
+-- Remove duplicates
+DELETE sp1 FROM SalesPersons sp1
+JOIN SalesPersons sp2 
+ON sp1.SPID = sp2.SPID AND sp1.rowid > sp2.rowid;
+
+-- Standardize names & team
+UPDATE SalesPersons SET 
+    Sales_person = INITCAP(Sales_person),
+    Team = INITCAP(Team);
+
+-- Remove invalid picture URLs
+DELETE FROM SalesPersons WHERE Picture IS NULL OR Picture NOT LIKE 'http%';
+
+
+-- Remove duplicates
+DELETE c1 FROM Calendar c1
+JOIN Calendar c2 
+ON c1.cal_date = c2.cal_date AND c1.rowid > c2.rowid;
+
+-- Remove invalid months/days
+DELETE FROM Calendar WHERE Month_num NOT BETWEEN 1 AND 12;
+DELETE FROM Calendar WHERE weekday_num NOT BETWEEN 1 AND 7;
+
+-- Restrict year range
+DELETE FROM Calendar WHERE year < 2000 OR year > YEAR(CURDATE());
